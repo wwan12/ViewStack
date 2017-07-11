@@ -10,11 +10,11 @@ import com.hq.viewstack.OnlyActivity;
  */
 
 public class MainLock extends LocalLock {
-    public MainLock(OnlyActivity context, ViewDataBinding dataBinding) {
-        super(context, dataBinding);
+    public MainLock(OnlyActivity context) {
+        super(context);
     }
 
     public void toViewA() {
-        context.startView("viewA",null);
+        context.startView("viewA",new ViewLog(context));
     }
 }

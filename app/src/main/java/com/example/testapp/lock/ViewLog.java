@@ -1,7 +1,5 @@
 package com.example.testapp.lock;
 
-import android.databinding.ViewDataBinding;
-
 import com.hq.viewstack.LocalLock;
 import com.hq.viewstack.OnlyActivity;
 
@@ -10,8 +8,8 @@ import com.hq.viewstack.OnlyActivity;
  */
 
 public class ViewLog extends LocalLock {
-    public ViewLog(OnlyActivity context, ViewDataBinding dataBinding) {
-        super(context, dataBinding);
+    public ViewLog(OnlyActivity context) {
+        super(context);
     }
 
 }

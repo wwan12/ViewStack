@@ -1,7 +1,6 @@
 package com.hq.viewstack;
 
 import android.databinding.BaseObservable;
-import android.databinding.ViewDataBinding;
 
 /**
  * Created by 浩琦 on 2017/6/30.
@@ -9,15 +8,13 @@ import android.databinding.ViewDataBinding;
 
 public class LocalLock<T extends BaseObservable> {
     protected OnlyActivity context;
-    protected ViewDataBinding dataBinding;
+    protected OnlyActivity.ViewStack viewStack;
     protected String tag;
-
-    public LocalLock(OnlyActivity context, ViewDataBinding dataBinding) {
-        this.context = context;
-        this.dataBinding=dataBinding;
-    }
-
     protected T localData;
+    public LocalLock(OnlyActivity context) {
+        this.context = context;
+
+    }
 
     protected void onCreateCache(boolean isCache){
 
@@ -26,4 +23,11 @@ public class LocalLock<T extends BaseObservable> {
     protected void setTag(String tag){
         this.tag=tag;
     }
+    public void setViewStack(OnlyActivity.ViewStack viewStack) {
+        this.viewStack = viewStack;
+    }
+
+
+
+
 }

@@ -5,8 +5,8 @@ import android.databinding.ViewDataBinding;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 
 import com.hq.viewstack.Model.ViewModel;
@@ -15,6 +15,7 @@ import com.hq.viewstack.databinding.MainBinding;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
 
 import dalvik.system.DexFile;
@@ -22,8 +23,8 @@ import dalvik.system.DexFile;
 public class OnlyActivity extends AppCompatActivity {
     private ArrayList<ViewStack> viewStacks;
     private ArrayList<ViewModel> allViewName;
-    private ArrayList<String> stacks;
     private MainBinding mainBinding;
+    private HashMap<Integer, Object> runTimeData;
 
 
     @Override
@@ -31,13 +32,14 @@ public class OnlyActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         mainBinding = DataBindingUtil.setContentView(this, R.layout.main);
         init();
+        bindViewName("com.example.testapp");
     }
 
 
     private void init() {
         viewStacks = new ArrayList<>(10);
         allViewName = new ArrayList<>(32);
-        stacks = new ArrayList<>(10);
+        runTimeData = new HashMap(20);
 
     }
 
@@ -45,17 +47,11 @@ public class OnlyActivity extends AppCompatActivity {
         allViewName.add(model);
     }
 
-    protected void bindViewName(String viewPath) {
-        List<String> classNameList = getClassName(viewPath);
-        for (int i = 0; i < classNameList.size(); i++) {
-            Log.e("hjo", "获取到的类名：" + classNameList.get(i));
-        }
-    }
 
     /**
      * 单个View缓存
      */
-    private class ViewStack {
+    public class ViewStack {
         public ViewStack(String tag) {
             for (ViewModel viewModel : allViewName) {
                 if (viewModel.tag.equals(tag)) {
@@ -88,21 +84,22 @@ public class OnlyActivity extends AppCompatActivity {
      * 多次跳转只有一份缓存(次序会被记录)
      * tag view_tag, Cache 绑定类对象
      */
-    public View startView(String tag, LocalLock Cache) {
+    public View startView(String tag, LocalLock lock) {
         mainBinding.main.removeAllViews();
         ViewStack viewStack = findView(tag);
         if (viewStack == null) {
             viewStack = new ViewStack(tag);
             mainBinding.main.addView(viewStack.viewData.getRoot());
             viewStacks.add(viewStack);
-            stacks.add(viewStack.tag);
-            Cache.setTag(tag);
-            viewStack.viewData.setVariable(findBrId(tag), Cache);
+            if (lock != null) {
+                lock.setTag(tag);
+                lock.setViewStack(viewStack);
+                viewStack.viewData.setVariable(findBrId(tag), lock);
+            }
             return viewStack.viewData.getRoot();
         } else {
             mainBinding.main.addView(viewStack.viewData.getRoot());
 //                viewStacks.add(viewStack);
-            stacks.add(viewStack.tag);
             return viewStack.viewData.getRoot();
         }
     }
@@ -126,25 +123,23 @@ public class OnlyActivity extends AppCompatActivity {
 //        return null;
 //    }
 
-    private void startView(ViewStack stack) {
-        mainBinding.main.removeAllViews();
-        mainBinding.main.addView(stack.viewData.getRoot());
-    }
 
     /**
      * 回退
      * 回退一个view
      */
     public void backView() {
-        if (stacks.size() - 2 < 0) {
+        if (viewStacks.size() - 2 < 0) {
             finish();
         } else {
-            startView(stacks.get(stacks.size() - 2), null);
-            removeView(stacks.get(stacks.size()-1));
-            stacks.remove(stacks.size()-1);
+            startView(viewStacks.get(viewStacks.size() - 2).tag, null);
+            removeView(viewStacks.get(viewStacks.size() - 1).tag);
         }
     }
 
+    /**
+     * 删除一个view（不会在回退到）
+     */
     public void removeView(String tag) {
         for (int i = 0; i < viewStacks.size(); i++) {
             if (viewStacks.get(i).tag.equals(tag)) {
@@ -153,20 +148,15 @@ public class OnlyActivity extends AppCompatActivity {
         }
     }
 
+
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        if (event.getAction() == MotionEvent.BUTTON_BACK) {
-            if (viewStacks.size() - 2 < 0) {
-                finish();
-            } else {
-                startView(viewStacks.get(viewStacks.size() - 2));
-                viewStacks.remove(viewStacks.size() - 1);
-            }
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            backView();
             return true;
         }
-        return super.onTouchEvent(event);
+        return super.onKeyDown(keyCode, event);
     }
-
 
     /**
      *
@@ -205,6 +195,20 @@ public class OnlyActivity extends AppCompatActivity {
 //            viewStacks.remove(i);
 //        }
         super.onTrimMemory(level);
+    }
+
+    public void addRunTimeData(int id, Object data) {
+        runTimeData.put(id, data);
+    }
+    public void removeRunTimeData(int id){
+        runTimeData.remove(id);
+    }
+
+    protected void bindViewName(String viewPath) {
+        List<String> classNameList = getClassName(viewPath);
+        for (int i = 0; i < classNameList.size(); i++) {
+            Log.e("hjo", "获取到的类名：" + classNameList.get(i));
+        }
     }
 
     public List<String> getClassName(String packageName) {
