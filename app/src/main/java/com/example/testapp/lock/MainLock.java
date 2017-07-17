@@ -1,7 +1,5 @@
 package com.example.testapp.lock;
 
-import android.databinding.ViewDataBinding;
-
 import com.hq.viewstack.LocalLock;
 import com.hq.viewstack.OnlyActivity;
 
@@ -15,6 +13,6 @@ public class MainLock extends LocalLock {
     }
 
     public void toViewA() {
-        context.startView("viewA",new ViewLog(context));
+        activity.startView("viewA",new ViewLog(activity));
     }
 }

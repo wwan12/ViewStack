@@ -7,7 +7,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
-import android.view.View;
 
 import com.hq.viewstack.Model.ViewModel;
 import com.hq.viewstack.databinding.MainBinding;
@@ -25,6 +24,8 @@ public class OnlyActivity extends AppCompatActivity {
     private ArrayList<ViewModel> allViewName;
     private MainBinding mainBinding;
     private HashMap<Integer, Object> runTimeData;
+    private HashMap<Integer, Object> temporaryData;
+    private boolean allAni;
 
 
     @Override
@@ -40,6 +41,7 @@ public class OnlyActivity extends AppCompatActivity {
         viewStacks = new ArrayList<>(10);
         allViewName = new ArrayList<>(32);
         runTimeData = new HashMap(20);
+        allAni=true;
 
     }
 
@@ -84,24 +86,37 @@ public class OnlyActivity extends AppCompatActivity {
      * 多次跳转只有一份缓存(次序会被记录)
      * tag view_tag, Cache 绑定类对象
      */
-    public View startView(String tag, LocalLock lock) {
+    public void startView(String tag, LocalLock lock) {
         mainBinding.main.removeAllViews();
         ViewStack viewStack = findView(tag);
         if (viewStack == null) {
-            viewStack = new ViewStack(tag);
-            mainBinding.main.addView(viewStack.viewData.getRoot());
-            viewStacks.add(viewStack);
-            if (lock != null) {
-                lock.setTag(tag);
-                lock.setViewStack(viewStack);
-                viewStack.viewData.setVariable(findBrId(tag), lock);
-            }
-            return viewStack.viewData.getRoot();
+            addNewView(tag,lock);
         } else {
-            mainBinding.main.addView(viewStack.viewData.getRoot());
-//                viewStacks.add(viewStack);
-            return viewStack.viewData.getRoot();
+            loadExistView(viewStack);
         }
+        finalView();
+    }
+
+    private void addNewView(String tag,LocalLock lock){
+        ViewStack viewStack = new ViewStack(tag);
+        viewStacks.add(viewStack);
+        mainBinding.main.addView(viewStack.viewData.getRoot());
+        if (lock != null) {
+            lock.setViewStack(viewStack);
+            lock.openAni(allAni);
+            lock.onCreate();
+            viewStack.viewData.setVariable(findBrId(tag), lock);
+        }
+    }
+
+    private void loadExistView(ViewStack viewStack){
+        mainBinding.main.addView(viewStack.viewData.getRoot());
+
+    }
+    private void finalView(){
+        if (temporaryData==null)return;
+        temporaryData.clear();
+        temporaryData=null;
     }
 
 //    public View startView(int resId, boolean isCache) {
@@ -180,13 +195,22 @@ public class OnlyActivity extends AppCompatActivity {
         return 0;
     }
 
-    private View findView(int resId) {
-        for (ViewStack viewStack : viewStacks) {
-            if (viewStack.resId == resId) {
-                return viewStack.viewData.getRoot();
-            }
-        }
-        return null;
+//    private View findView(int resId) {
+//        for (ViewStack viewStack : viewStacks) {
+//            if (viewStack.resId == resId) {
+//                return viewStack.viewData.getRoot();
+//            }
+//        }
+//        return null;
+//    }
+
+    /**
+     * 是否开启动画 默认开
+     *
+     * @param allAni
+     */
+    public void setAllAni(boolean allAni) {
+        this.allAni = allAni;
     }
 
     @Override
@@ -197,11 +221,33 @@ public class OnlyActivity extends AppCompatActivity {
         super.onTrimMemory(level);
     }
 
+    /*
+    * 整个应用运行时数据
+    * */
     public void addRunTimeData(int id, Object data) {
         runTimeData.put(id, data);
     }
-    public void removeRunTimeData(int id){
+
+    public void removeRunTimeData(int id) {
         runTimeData.remove(id);
+    }
+
+    /*
+ * 单个View临时数据(大对象)
+ * 跳转后删除
+ * */
+    public void addTemporaryData(int id, Object data) {
+        if (temporaryData==null){
+            temporaryData = new HashMap<>();
+        }
+        temporaryData.put(id, data);
+    }
+
+    public void removeTemporaryData(int id) {
+        if (temporaryData==null){
+            temporaryData = new HashMap<>();
+        }
+        temporaryData.remove(id);
     }
 
     protected void bindViewName(String viewPath) {
@@ -227,4 +273,5 @@ public class OnlyActivity extends AppCompatActivity {
         }
         return classNameList;
     }
+
 }
