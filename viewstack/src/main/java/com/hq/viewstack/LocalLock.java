@@ -11,6 +11,7 @@ import android.view.animation.AnimationUtils;
 public class LocalLock<T extends BaseObservable> {
     protected OnlyActivity activity;
     protected OnlyActivity.ViewStack viewStack;
+    //页面绑定数据
     protected T localData;
     protected Animation apiInAnimation, apiOutAnimation, LeftInAnimation, rightOutAnimation;
 
@@ -26,10 +27,18 @@ public class LocalLock<T extends BaseObservable> {
     /**
      * 初始化完成调用
      */
-    public void onCreate() {
+    protected void onCreate() {
 
     }
+    protected void stop(){
 
+    };
+    protected void reStart(){
+
+    };
+    protected void des(){
+
+    };
     /**
      * 是否开启动画 默认开
      *

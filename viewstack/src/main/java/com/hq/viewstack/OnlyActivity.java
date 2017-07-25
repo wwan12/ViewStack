@@ -15,17 +15,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 import dalvik.system.DexFile;
 
 public class OnlyActivity extends AppCompatActivity {
-    private ArrayList<ViewStack> viewStacks;
-    private ArrayList<ViewModel> allViewName;
+    private LinkedList<ViewStack> viewStacks;
+    private LinkedList<ViewModel> allViewName;
     private MainBinding mainBinding;
     private HashMap<Integer, Object> runTimeData;
     private HashMap<Integer, Object> temporaryData;
     private boolean allAni;
+    private LocalLock lock;
 
 
     @Override
@@ -38,8 +40,8 @@ public class OnlyActivity extends AppCompatActivity {
 
 
     private void init() {
-        viewStacks = new ArrayList<>(10);
-        allViewName = new ArrayList<>(32);
+        viewStacks = new LinkedList<>();
+        allViewName = new LinkedList<>();
         runTimeData = new HashMap(20);
         allAni=true;
 
@@ -54,13 +56,16 @@ public class OnlyActivity extends AppCompatActivity {
      * 单个View缓存
      */
     public class ViewStack {
-        public ViewStack(String tag) {
+        public ViewStack(String tag,LocalLock lock) {
             for (ViewModel viewModel : allViewName) {
                 if (viewModel.tag.equals(tag)) {
                     ViewDataBinding viewData = DataBindingUtil.inflate(LayoutInflater.from(OnlyActivity.this), viewModel.resId, null, false);
                     this.viewData = viewData;
                     this.tag = tag;
                     this.resId = viewModel.resId;
+                    this.lock=lock;
+                }else {
+                    new ViewNotFindException("没有添加这个View到列表中");
                 }
             }
         }
@@ -78,13 +83,14 @@ public class OnlyActivity extends AppCompatActivity {
         public int resId;
         public String tag;
         public ViewDataBinding viewData;
+        public LocalLock lock;
     }
 
 
     /**
      * 跳转
-     * 多次跳转只有一份缓存(次序会被记录)
-     * tag view_tag, Cache 绑定类对象
+     * 多次跳转只有一份缓存
+     * tag view_tag, lock 绑定类对象
      */
     public void startView(String tag, LocalLock lock) {
         mainBinding.main.removeAllViews();
@@ -97,8 +103,9 @@ public class OnlyActivity extends AppCompatActivity {
         finalView();
     }
 
+
     private void addNewView(String tag,LocalLock lock){
-        ViewStack viewStack = new ViewStack(tag);
+        ViewStack viewStack = new ViewStack(tag,lock);
         viewStacks.add(viewStack);
         mainBinding.main.addView(viewStack.viewData.getRoot());
         if (lock != null) {
@@ -107,11 +114,13 @@ public class OnlyActivity extends AppCompatActivity {
             lock.onCreate();
             viewStack.viewData.setVariable(findBrId(tag), lock);
         }
+        this.lock=lock;
     }
 
     private void loadExistView(ViewStack viewStack){
         mainBinding.main.addView(viewStack.viewData.getRoot());
-
+        this.lock=viewStack.lock;
+        viewStack.lock.reStart();
     }
     private void finalView(){
         if (temporaryData==null)return;
@@ -139,6 +148,22 @@ public class OnlyActivity extends AppCompatActivity {
 //    }
 
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (lock!=null){
+            lock.stop();
+        }
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        if (lock!=null){
+            lock.reStart();
+        }
+    }
+
     /**
      * 回退
      * 回退一个view
@@ -149,6 +174,7 @@ public class OnlyActivity extends AppCompatActivity {
         } else {
             startView(viewStacks.get(viewStacks.size() - 2).tag, null);
             removeView(viewStacks.get(viewStacks.size() - 1).tag);
+            lock.des();
         }
     }
 
@@ -272,6 +298,16 @@ public class OnlyActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return classNameList;
+    }
+
+
+
+
+
+    private class ViewNotFindException extends Exception{
+        public ViewNotFindException(String message) {
+            super(message);
+        }
     }
 
 }
