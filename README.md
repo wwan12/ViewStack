@@ -8,5 +8,7 @@ An attempt to reduce Activity usage and reduce coupling<br>
 
 ## 0.2 版本<br>
 修复了跳转View与回退View的bug<br>
-修改了加载View的方式
+修改了加载View的方式<br>
 
+## 0.2.1 版本<br>
+添加加载动画<br>
